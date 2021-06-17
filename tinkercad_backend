@@ -1,0 +1,84 @@
+#include <LiquidCrystal.h>
+
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+
+int N=0; //used to reset the device once N=2
+float circuit_voltage=3.7;
+float resistor=120.0;
+float k=2.0;
+float gauge_resistance=120.0;
+float initial_bandsize=40.0;
+float increase=0.0;
+float first_bandsize=0;
+void setup() {
+  Serial.begin(9600);
+  lcd.begin(16,2);
+  pinMode(A0, INPUT);
+  lcd.print("THE HYPER BAND");
+  delay(3000);
+  lcd.clear();
+}
+void loop() {
+  
+  float input_voltage = 0.0;
+  float gauge_resistor=0.0;
+  float change_resistor=0.0;
+  float band_strain=0.0;
+  float bandsize=0.0;
+  float analog_value = analogRead(A1);
+  input_voltage = ((analog_value * 1.3) / 1024.0)+1.85;
+  gauge_resistor = ((input_voltage/circuit_voltage) * resistor)/(1-(input_voltage/circuit_voltage));
+  change_resistor = gauge_resistor - gauge_resistance;
+  band_strain = change_resistor / (gauge_resistance *k);
+  bandsize = (band_strain * initial_bandsize) + initial_bandsize;
+  while (input_voltage > 2.47) {
+    lcd.print("WARNING! REDUCE");
+    lcd.setCursor(0,1);
+    lcd.print("STRAIN ON BAND");
+    delay(3000);
+    lcd.clear(); 
+    lcd.setCursor(0,0);
+    lcd.print("TOO MUCH STRAIN");
+    lcd.setCursor(0,1);
+    lcd.print("= BAD DATA :(");
+    delay(3000);
+    lcd.clear();
+    input_voltage=0;
+  }
+  if (digitalRead(A0) == HIGH) {
+    if (N == 0) {
+      lcd.setCursor(0, 0);
+      lcd.print("Size[cm]=");
+      lcd.print(bandsize);
+      first_bandsize=bandsize;
+      N = N+1;
+      Serial.print("N= ");
+      Serial.println(N);
+      delay(500);
+    }
+  }
+  if (digitalRead(A0) == HIGH) {
+    if (N == 1) {
+      lcd.setCursor(0, 0);
+      lcd.print("Size[cm]=");
+      lcd.print(bandsize);
+      lcd.setCursor(0, 1);
+      lcd.print("Change[%]=");
+      increase=((bandsize-first_bandsize)/first_bandsize)*100;
+      lcd.print(increase);
+      N = N+1;
+      Serial.print("N= ");
+      Serial.println(N);
+      delay(500);
+    }
+  }
+  if (digitalRead(A0) == HIGH) {
+    if (N == 2) {
+      lcd.clear();
+      N = 0;
+      increase = 0;
+      first_bandsize = 0;
+      delay(500);
+    }
+  }
+}
